@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/icon.png" width="128" alt="DRETerm Icon"></p>
+![DRETerm](docs/banner.png)
 
 # DRETerm - das Mac-Terminal mit Sidebar statt Tabs
 
