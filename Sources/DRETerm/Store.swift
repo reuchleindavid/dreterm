@@ -121,6 +121,13 @@ final class Store: NSObject, ObservableObject {
         v.startProcess(executable: shell, args: [], environment: envList,
                        execName: "-" + (shell as NSString).lastPathComponent, currentDirectory: dir)
         update(v.sessionID) { $0 = SessionRuntime() }
+        if let i = sessions.firstIndex(where: { $0.id == v.sessionID }),
+           let cmd = sessions[i].startupCommand, !cmd.isEmpty {
+            sessions[i].startupCommand = nil // nur einmal
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak v] in
+                v?.send(txt: cmd + "\r")
+            }
+        }
     }
 
     func apply(settings s: AppSettings, to v: DRETerminalView) {

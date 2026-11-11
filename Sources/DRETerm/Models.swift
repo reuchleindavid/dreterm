@@ -49,6 +49,8 @@ struct Session: Identifiable, Codable, Equatable {
     var directory: String
     var notes: String = ""
     var createdAt = Date()
+    /// Einmaliger Befehl, der beim ersten Start der Shell ausgeführt wird (z. B. `claude --resume <id>`).
+    var startupCommand: String?
 }
 
 /// Live-Zustand einer Sitzung (nicht persistiert).

@@ -109,6 +109,12 @@ struct SessionRow: View {
                 subtitle
             }
             Spacer(minLength: 2)
+            if let cmd = session.startupCommand, !cmd.isEmpty {
+                Image(systemName: "arrow.uturn.forward.circle")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .help("Startet beim Öffnen: \(cmd)")
+            }
             badge
             if index < 9 && !isRenaming {
                 Text("⌘\(index + 1)")
