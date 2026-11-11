@@ -12,6 +12,36 @@ final class DRETerminalView: LocalProcessTerminalView {
     init(sessionID: UUID) {
         self.sessionID = sessionID
         super.init(frame: NSRect(x: 0, y: 0, width: 800, height: 500))
+        registerForDraggedTypes([.fileURL, .string])
+    }
+
+    // MARK: Drag & Drop wie in Terminal.app: Dateien/Ordner -> maskierter Pfad, Text -> Text
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { .copy }
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { .copy }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        let pb = sender.draggingPasteboard
+        if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
+           !urls.isEmpty {
+            send(txt: urls.map { Self.shellEscape($0.path) }.joined(separator: " ") + " ")
+        } else if let text = pb.string(forType: .string), !text.isEmpty {
+            send(txt: text)
+        } else {
+            return false
+        }
+        window?.makeFirstResponder(self)
+        return true
+    }
+
+    static func shellEscape(_ path: String) -> String {
+        let special = Set(" \t()[]{}'\"&;|<>*?$`!#~\\=,^%")
+        var out = ""
+        for ch in path {
+            if special.contains(ch) { out.append("\\") }
+            out.append(ch)
+        }
+        return out
     }
 
     required init?(coder: NSCoder) { fatalError("not supported") }

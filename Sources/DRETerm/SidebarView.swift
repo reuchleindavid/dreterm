@@ -15,14 +15,12 @@ struct SidebarView: View {
                     ForEach(pinned) { s in
                         SessionRow(session: s, index: order.firstIndex(of: s) ?? 99)
                     }
-                    .onMove { store.move(pinned: true, from: $0, to: $1) }
                 }
             }
             Section("Sitzungen") {
                 ForEach(normal) { s in
                     SessionRow(session: s, index: order.firstIndex(of: s) ?? 99)
                 }
-                .onMove { store.move(pinned: false, from: $0, to: $1) }
             }
             if !store.snippets.isEmpty {
                 Section("Snippets", isExpanded: $snippetsExpanded) {
@@ -36,6 +34,21 @@ struct SidebarView: View {
         .scrollContentBackground(.hidden)
         .background(store.theme.bg.opacity(store.settings.opacity * (store.theme.isDark ? 0.82 : 0.45)))
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
+        // Ordner aus dem Finder auf die Sidebar ziehen -> neue Sitzung dort
+        .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+            for p in providers {
+                _ = p.loadObject(ofClass: URL.self) { url, _ in
+                    guard let url else { return }
+                    var isDir: ObjCBool = false
+                    FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+                    let dir = isDir.boolValue ? url.path : url.deletingLastPathComponent().path
+                    DispatchQueue.main.async {
+                        store.newSession(directory: dir, name: (dir as NSString).lastPathComponent)
+                    }
+                }
+            }
+            return true
+        }
     }
 
     private var footer: some View {
@@ -135,6 +148,11 @@ struct SessionRow: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 1)
         )
+        .onDrag {
+            store.draggingID = session.id
+            return NSItemProvider(object: session.id.uuidString as NSString)
+        }
+        .onDrop(of: [.text], delegate: SessionDropDelegate(target: session.id, store: store))
         .contextMenu { SessionMenu(id: session.id) }
     }
 
@@ -239,4 +257,26 @@ struct SnippetRow: View {
         .onHover { hover = $0 }
         .help(snippet.command)
     }
+}
+
+/// Live-Umsortieren in der Sidebar: beim Überfahren einer Zeile rückt die gezogene Sitzung an deren Platz.
+struct SessionDropDelegate: DropDelegate {
+    let target: UUID
+    let store: Store
+
+    func validateDrop(info: DropInfo) -> Bool { store.draggingID != nil }
+
+    func dropEntered(info: DropInfo) {
+        guard let id = store.draggingID, id != target else { return }
+        withAnimation(.snappy(duration: 0.18)) { store.moveSession(id, onto: target) }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+
+    func performDrop(info: DropInfo) -> Bool {
+        store.draggingID = nil
+        return true
+    }
+
+    func dropExited(info: DropInfo) {}
 }

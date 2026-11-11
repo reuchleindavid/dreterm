@@ -13,6 +13,7 @@ final class Store: NSObject, ObservableObject {
     @Published var runtime: [UUID: SessionRuntime] = [:]
 
     @Published var renamingID: UUID?
+    @Published var draggingID: UUID?
     @Published var showPalette = false
     @Published var showInspector = false
 
@@ -317,6 +318,20 @@ final class Store: NSObject, ObservableObject {
     func modify(_ id: UUID, _ change: (inout Session) -> Void) {
         guard let i = sessions.firstIndex(where: { $0.id == id }) else { return }
         change(&sessions[i])
+    }
+
+    /// Sitzung `id` an die Position von `target` schieben (live beim Ziehen).
+    /// Landet sie im anderen Bereich, übernimmt sie dessen Angeheftet-Status.
+    func moveSession(_ id: UUID, onto target: UUID) {
+        guard id != target,
+              let from = sessions.firstIndex(where: { $0.id == id }),
+              let to = sessions.firstIndex(where: { $0.id == target }) else { return }
+        var s = sessions[from]
+        s.pinned = sessions[to].pinned
+        var list = sessions
+        list.remove(at: from)
+        list.insert(s, at: to)
+        sessions = list
     }
 
     func move(pinned: Bool, from: IndexSet, to: Int) {
