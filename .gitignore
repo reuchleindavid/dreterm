@@ -1,0 +1,7 @@
+.build/
+dist/
+.swiftpm/
+.DS_Store
+# interne Notizen
+STAND.md
+CLAUDE.md
